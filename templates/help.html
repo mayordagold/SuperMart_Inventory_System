@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Help & FAQ{% endblock %}
+{% block content %}
+<div class="form-box" style="max-width:700px;margin:40px auto;">
+  <h2 class="form-title">❓ Help & Frequently Asked Questions</h2>
+  <h3>How do I add a new product?</h3>
+  <p>Admins can add products via the <b>Add Product</b> link in the dashboard or navigation bar.</p>
+  <h3>How do I restock inventory?</h3>
+  <p>Admins can restock products using the <b>Restock Product</b> page.</p>
+  <h3>How are expiry and low stock alerts shown?</h3>
+  <p>Products near expiry or low in stock are highlighted in the inventory table with colored labels.</p>
+  <h3>How do I back up or restore the database?</h3>
+  <p>Use the <code>db_backup.py</code> script:<br>
+  <code>python db_backup.py backup</code> to back up, <br>
+  <code>python db_backup.py restore &lt;backup_file&gt;</code> to restore.</p>
+  <h3>How do I access the REST API?</h3>
+  <p>Login via the web UI, then access endpoints like <code>/api/products</code> for JSON data.</p>
+  <h3>Who can manage users?</h3>
+  <p>Only admin users can create, edit, or delete users.</p>
+  <h3>Need more help?</h3>
+  <p>Contact your system administrator or see the README for more details.</p>
+</div>
+{% endblock %}

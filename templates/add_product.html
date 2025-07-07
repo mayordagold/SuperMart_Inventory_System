@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}➕ Add Product{% endblock %}
+
+{% block content %}
+  <form method="POST" class="form-box" style="max-width: 480px; margin: 40px auto 0 auto;">
+    <h2 class="form-title">➕ Add New Product</h2>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="flash">{{ messages[0] }}</div>
+      {% endif %}
+    {% endwith %}
+
+    <label for="name">Product Name</label>
+    <input type="text" name="name" id="name" required>
+
+    <label for="price">Price</label>
+    <input type="text" name="price" id="price" required>
+
+    <label for="quantity">Initial Quantity</label>
+    <input type="text" name="quantity" id="quantity" required>
+
+    <label for="category">Category</label>
+    <select name="category" id="category" required>
+      <option value="Analgesic">Analgesic</option>
+      <option value="Antacid">Antacid</option>
+      <option value="Anti-Amoebic">Anti-Amoebic</option>
+      <option value="Antibiotic">Antibiotic</option>
+      <option value="Antifungal">Antifungal</option>
+      <option value="Antihypertensive">Antihypertensive</option>
+      <option value="Anti-inflammatory">Anti-inflammatory</option>
+      <option value="Antimalarial">Antimalarial</option>
+      <option value="Antipyretic">Antipyretic</option>
+      <option value="Antiseptics / Disinfectants">Antiseptics / Disinfectants</option>
+      <option value="Bandage">Bandage</option>
+      <option value="Blood Tonic(Capsule)">Blood Tonic(Capsule)</option>
+      <option value="Blood Tonic(Syrup)">Blood Tonic(Syrup)</option>
+      <option value="Contraceptive">Contraceptive</option>
+      <option value="Energy-Drink">Energy-Drink</option>
+      <option value="Epo-Eja">Epo-Eja</option>
+      <option value="Face-Mask">Face-Mask</option>
+      <option value="Multivitamin(Capsule)">Multivitamin(Capsule)</option>
+      <option value="Other">Other</option>
+      <option value="Pile Drug (or Anti-hemorrhoid)">Pile Drug (or Anti-hemorrhoid)</option>
+      <option value="Pure Water(Bag)">Pure Water(Bag)</option>
+      <option value="Sanitary Pad">Sanitary Pad</option>
+      <option value="Sex Drug">Sex Drug</option>
+      <option value="Soft-Drink">Soft-Drink</option>
+      <option value="Supplement">Supplement</option>
+      <option value="Table Water(Pack)">Table Water(Pack)</option>
+    </select>
+
+    <label for="expiry">Expiry Date (YYYY-MM-DD)</label>
+    <input type="text" name="expiry" id="expiry" placeholder="2025-12-31" required>
+
+    <label for="supplier">Supplier</label>
+    <input type="text" name="supplier" id="supplier" required>
+
+    <button type="submit" class="submit-btn">Add Product</button>
+  </form>
+{% endblock %}

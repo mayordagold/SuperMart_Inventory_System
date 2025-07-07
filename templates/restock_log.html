@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}📦 Restock History{% endblock %}
+
+{% block content %}
+  <div class="form-box" style="max-width: 800px; margin: 40px auto 0 auto;">
+    <h2 class="form-title">📦 Restock Log</h2>
+
+    {% if logs %}
+      <table class="styled-table" style="margin-top: 10px;">
+        <thead>
+          <tr>
+            <th>Date & Time</th>
+            <th>Product</th>
+            <th>Quantity Added</th>
+            <th>Restocked By</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+          <tr>
+            <td>{{ log[0] }}</td>
+            <td>{{ log[1] }}</td>
+            <td>+{{ log[2] }}</td>
+            <td>{{ log[3] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="flash">No restock activity recorded yet.</div>
+    {% endif %}
+  </div>
+{% endblock %}
