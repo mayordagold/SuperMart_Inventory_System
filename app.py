@@ -695,12 +695,42 @@ def restock():
             flash("❌ Invalid quantity.")
             return redirect("/restock")
 
-        # Update inventory
+        price = request.form.get("price", "").strip()
+        expiry = request.form.get("expiry", "").strip()
+
+        # Update inventory quantity
         run_query(
             "UPDATE products SET quantity_in_stock = quantity_in_stock + ? WHERE product_id = ?",
             (quantity, product_id),
             fetch=False
         )
+
+        # Update price if provided
+        if price:
+            try:
+                price_val = float(price)
+                run_query(
+                    "UPDATE products SET price = ? WHERE product_id = ?",
+                    (price_val, product_id),
+                    fetch=False
+                )
+            except ValueError:
+                flash("❌ Invalid price format.")
+                return redirect("/restock")
+
+        # Update expiry if provided
+        if expiry:
+            try:
+                datetime.strptime(expiry, "%Y-%m-%d")
+                run_query(
+                    "UPDATE products SET expiry_date = ? WHERE product_id = ?",
+                    (expiry, product_id),
+                    fetch=False
+                )
+            except ValueError:
+                flash("❌ Invalid expiry date format. Use YYYY-MM-DD.")
+                return redirect("/restock")
+
         # Log restock in inventory_log (always provide a non-null product_id)
         pid = product_id if product_id else "N/A"
         run_query(

@@ -17,6 +17,12 @@
       <label for="quantity">Quantity to Add:</label>
       <input type="number" name="quantity" id="quantity" min="1" required>
       <br><br>
+      <label for="price">Updated Price (optional):</label>
+      <input type="text" name="price" id="price" placeholder="Leave blank to keep current">
+      <br><br>
+      <label for="expiry">Updated Expiry Date (optional, YYYY-MM-DD):</label>
+      <input type="text" name="expiry" id="expiry" placeholder="Leave blank to keep current">
+      <br><br>
       <button type="submit" class="btn">Restock</button>
       <a href="/inventory" class="btn-cancel">Cancel</a>
     </form>
