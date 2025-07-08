@@ -960,6 +960,9 @@ def admin_inventory_overview():
     if request.method == "POST":
         staff_id = request.form.get("staff_id")
         product_id = request.form.get("product_id")
+        if not staff_id or not product_id:
+            flash("❌ Please select both a staff member and a product.")
+            return redirect("/admin_inventory_overview")
         try:
             quantity = int(request.form.get("quantity"))
             if quantity <= 0:

@@ -63,6 +63,10 @@
     <!-- Assignment Form Section -->
     <div style="background:linear-gradient(120deg,#f8fafc 80%,#e3f0ff 100%); border-radius:12px; box-shadow:0 1px 6px rgba(44,62,80,0.06); padding:24px 18px 18px 18px; max-width:520px; margin:0 auto;">
       <h2 style="color:#217dbb; font-size:1.15rem; margin-top:0;">Assign Product to Staff</h2>
+      {% if products|length == 0 %}
+        <div style="color:#c0392b; font-weight:bold; margin-bottom:10px;">No products in central inventory. Please add products first.</div>
+        <button class="submit-btn" style="width:100%;" disabled>Add Product to Assign</button>
+      {% else %}
       <form method="POST" style="display:flex; flex-wrap:wrap; gap:16px; align-items:flex-end;">
         <div style="flex:1; min-width:140px;">
           <label for="staff_id">Staff:</label>
@@ -90,6 +94,7 @@
           <button type="submit" class="submit-btn" style="margin-top:0;width:100%;font-size:1.1em;">Assign &#10148;</button>
         </div>
       </form>
+      {% endif %}
     </div>
   </div>
   <p style="margin-top:30px; text-align:center;"><a href="/dashboard">&larr; Back to Dashboard</a></p>
