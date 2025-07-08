@@ -114,6 +114,79 @@ body {
   }
 }
 
+/* 📱 Extra mobile responsiveness */
+@media (max-width: 480px) {
+  body, .login-bg {
+    padding: 6px !important;
+  }
+  .navbar {
+    flex-direction: column;
+    padding: 8px 6px;
+    font-size: 0.98rem;
+    gap: 6px;
+  }
+  .form-box, .sell-form, .cart-section {
+    padding: 12px 4px 10px 4px;
+    max-width: 99vw;
+    margin: 12px auto;
+    box-shadow: 0 0 6px rgba(0,0,0,0.08);
+  }
+  .form-title {
+    font-size: 1.1rem;
+  }
+  input, select, button, .submit-btn {
+    font-size: 1rem;
+    padding: 7px;
+  }
+  .tiles {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 10px 2px 6px 2px;
+  }
+  .tile {
+    font-size: 1rem;
+    padding: 12px 0;
+  }
+  .styled-table, .transaction-table {
+    width: 100% !important;
+    font-size: 0.93rem;
+    padding: 0;
+  }
+  .dashboard-cards {
+    gap: 10px;
+  }
+  .card {
+    width: 98vw;
+    padding: 14px 4px 10px 4px;
+    font-size: 0.98rem;
+  }
+  .page-title, h2, h3 {
+    font-size: 1.1rem;
+  }
+  .navbar a {
+    margin-left: 0;
+    margin-right: 10px;
+    display: inline-block;
+  }
+}
+
+@media (max-width: 375px) {
+  .form-box, .sell-form, .cart-section, .card {
+    padding: 6px 2px 6px 2px;
+    font-size: 0.92rem;
+  }
+  .navbar {
+    font-size: 0.93rem;
+  }
+  .tile {
+    font-size: 0.93rem;
+    padding: 8px 0;
+  }
+  .page-title, h2, h3 {
+    font-size: 1rem;
+  }
+}
+
 .card {
   background: linear-gradient(135deg, #ffffff 60%, #e3f0ff 100%);
   border: none;
