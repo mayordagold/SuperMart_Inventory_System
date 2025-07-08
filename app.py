@@ -41,7 +41,7 @@ def restock_log():
         WHERE il.action = 'restock'
         ORDER BY il.timestamp DESC
     """)
-    
+
     return render_template("restock_log.html", logs=logs, now=datetime.now())
 
 @app.route("/inventory")
@@ -100,7 +100,7 @@ def transactions():
         flash("⛔ Please log in to access this page.")
         return redirect("/")
 
-    # Sanitize and extract filter inputs
+    role = session.get("role")
     filters = {
         "action": request.args.get("action", "").strip(),
         "user": request.args.get("user", "").strip(),
@@ -117,18 +117,22 @@ def transactions():
     """
     params = []
 
+    # Restrict staff to their own transactions
+    if role == "staff":
+        query += " AND u.user_id = ?"
+        params.append(session["user_id"])
+    else:
+        # Admin can filter by staff username
+        if filters["user"]:
+            query += " AND LOWER(u.username) = ?"
+            params.append(filters["user"].lower())
+
     if filters["action"]:
         query += " AND il.action = ?"
         params.append(filters["action"])
-
-    if filters["user"]:
-        query += " AND LOWER(u.username) = ?"
-        params.append(filters["user"].lower())
-
     if filters["start_date"]:
         query += " AND date(il.timestamp) >= ?"
         params.append(filters["start_date"])
-
     if filters["end_date"]:
         query += " AND date(il.timestamp) <= ?"
         params.append(filters["end_date"])
