@@ -866,6 +866,87 @@ def staff_inventory_report():
     from datetime import datetime
     return render_template("staff_inventory_report.html", staff_data=staff_data, now=datetime.now())
 
+# --- Admin Inventory Overview (Unified Management) ---
+@app.route("/admin_inventory_overview", methods=["GET", "POST"])
+def admin_inventory_overview():
+    if "user_id" not in session or session.get("role") != "admin":
+        flash("⛔ Admin access only.")
+        return redirect("/")
+
+    # Fetch all products
+    products = run_query("SELECT product_id, name, quantity_in_stock FROM products ORDER BY name ASC")
+    # Fetch all staff
+    staff_users = run_query("SELECT user_id, username FROM users WHERE role = 'staff' AND status = 'active' ORDER BY username")
+    # Fetch all staff inventory assignments
+    assignments = run_query("""
+        SELECT si.staff_id, u.username, si.product_id, p.name, si.quantity_allotted, si.quantity_remaining
+        FROM staff_inventory si
+        JOIN users u ON si.staff_id = u.user_id
+        JOIN products p ON si.product_id = p.product_id
+        ORDER BY u.username, p.name
+    """)
+
+    # Organize assignments for easy lookup
+    assignment_map = {}
+    for staff_id, username, product_id, product_name, qty_allotted, qty_remaining in assignments:
+        if staff_id not in assignment_map:
+            assignment_map[staff_id] = {"username": username, "products": []}
+        assignment_map[staff_id]["products"].append({
+            "product_id": product_id,
+            "product_name": product_name,
+            "quantity_allotted": qty_allotted,
+            "quantity_remaining": qty_remaining
+        })
+
+    # Handle assignment form submission
+    if request.method == "POST":
+        staff_id = request.form.get("staff_id")
+        product_id = request.form.get("product_id")
+        try:
+            quantity = int(request.form.get("quantity"))
+            if quantity <= 0:
+                flash("❌ Quantity must be positive.")
+                return redirect("/admin_inventory_overview")
+        except Exception:
+            flash("❌ Invalid quantity.")
+            return redirect("/admin_inventory_overview")
+
+        # Check available stock
+        product = run_query("SELECT quantity_in_stock FROM products WHERE product_id = ?", (product_id,))
+        if not product or int(product[0][0]) < quantity:
+            flash("❌ Not enough stock in central inventory.")
+            return redirect("/admin_inventory_overview")
+
+        # Deduct from central inventory
+        run_query("UPDATE products SET quantity_in_stock = quantity_in_stock - ? WHERE product_id = ?", (quantity, product_id), fetch=False)
+
+        # Add or update staff_inventory
+        existing = run_query("SELECT id, quantity_allotted, quantity_remaining FROM staff_inventory WHERE staff_id = ? AND product_id = ?", (staff_id, product_id))
+        if existing:
+            inv_id, qty_allotted, qty_remaining = existing[0]
+            run_query(
+                "UPDATE staff_inventory SET quantity_allotted = quantity_allotted + ?, quantity_remaining = quantity_remaining + ? WHERE id = ?",
+                (quantity, quantity, inv_id),
+                fetch=False
+            )
+        else:
+            run_query(
+                "INSERT INTO staff_inventory (staff_id, product_id, quantity_allotted, quantity_remaining) VALUES (?, ?, ?, ?)",
+                (staff_id, product_id, quantity, quantity),
+                fetch=False
+            )
+        flash("✅ Product allotted to staff successfully.")
+        return redirect("/admin_inventory_overview")
+
+    from datetime import datetime
+    return render_template(
+        "admin_inventory_overview.html",
+        products=products,
+        staff_users=staff_users,
+        assignment_map=assignment_map,
+        now=datetime.now()
+    )
+
 # Error Handlers
 @app.errorhandler(404)
 def not_found(e):

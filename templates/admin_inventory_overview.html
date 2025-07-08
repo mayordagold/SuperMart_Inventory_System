@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Admin Inventory Overview{% endblock %}
+{% block content %}
+<h2>Admin Inventory Overview</h2>
+
+<!-- Product Stock Table -->
+<h3>Master Inventory</h3>
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Product</th>
+            <th>Stock in Central Inventory</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in products %}
+        <tr>
+            <td>{{ p[1] }}</td>
+            <td>{{ p[2] }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Staff Assignments Table -->
+<h3>Staff Product Assignments</h3>
+{% if assignment_map %}
+    {% for staff_id, staff in assignment_map.items() %}
+        <h4>{{ staff.username }}</h4>
+        <table class="table table-sm table-striped">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Allotted</th>
+                    <th>Remaining</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for prod in staff.products %}
+                <tr>
+                    <td>{{ prod.product_name }}</td>
+                    <td>{{ prod.quantity_allotted }}</td>
+                    <td>{{ prod.quantity_remaining }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endfor %}
+{% else %}
+    <p>No product assignments yet.</p>
+{% endif %}
+
+<!-- Assignment Form -->
+<h3>Assign Product to Staff</h3>
+<form method="POST" class="form-inline mb-3">
+    <div class="form-group mr-2">
+        <label for="staff_id">Staff:</label>
+        <select name="staff_id" id="staff_id" class="form-control ml-2" required>
+            <option value="">Select Staff</option>
+            {% for s in staff_users %}
+                <option value="{{ s[0] }}">{{ s[1] }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group mr-2">
+        <label for="product_id">Product:</label>
+        <select name="product_id" id="product_id" class="form-control ml-2" required>
+            <option value="">Select Product</option>
+            {% for p in products %}
+                <option value="{{ p[0] }}">{{ p[1] }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group mr-2">
+        <label for="quantity">Quantity:</label>
+        <input type="number" name="quantity" id="quantity" class="form-control ml-2" min="1" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Assign</button>
+</form>
+
+<p><a href="/dashboard">&larr; Back to Dashboard</a></p>
+{% endblock %}
