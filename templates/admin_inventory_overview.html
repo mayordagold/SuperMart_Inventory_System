@@ -1,82 +1,94 @@
 {% extends "base.html" %}
 {% block title %}Admin Inventory Overview{% endblock %}
 {% block content %}
-<h2>Admin Inventory Overview</h2>
+<div class="card" style="max-width:900px;margin:30px auto 30px auto;box-shadow:0 4px 18px rgba(52,152,219,0.13);padding:32px 28px 28px 28px;">
+  <h2 class="page-title" style="margin-top:0;"> <span style="color:#3498db;">&#128230;</span> Inventory Management</h2>
 
-<!-- Product Stock Table -->
-<h3>Master Inventory</h3>
-<table class="table table-bordered">
-    <thead>
+  <!-- Product Stock Table -->
+  <div class="card" style="background:linear-gradient(120deg,#e3f0ff 80%,#f8fafc 100%);margin-bottom:30px;">
+    <h3 style="color:#217dbb;margin-top:0;">Master Inventory <span style="font-size:1.1em;">&#128203;</span></h3>
+    <table class="styled-table">
+      <thead>
         <tr>
-            <th>Product</th>
-            <th>Stock in Central Inventory</th>
+          <th>Product</th>
+          <th>Stock in Central Inventory</th>
         </tr>
-    </thead>
-    <tbody>
+      </thead>
+      <tbody>
         {% for p in products %}
         <tr>
-            <td>{{ p[1] }}</td>
-            <td>{{ p[2] }}</td>
+          <td>{{ p[1] }}</td>
+          <td>{{ p[2] }}</td>
         </tr>
         {% endfor %}
-    </tbody>
-</table>
+      </tbody>
+    </table>
+  </div>
 
-<!-- Staff Assignments Table -->
-<h3>Staff Product Assignments</h3>
-{% if assignment_map %}
-    {% for staff_id, staff in assignment_map.items() %}
-        <h4>{{ staff.username }}</h4>
-        <table class="table table-sm table-striped">
+  <!-- Staff Assignments Table -->
+  <div class="card" style="background:linear-gradient(120deg,#f8fafc 80%,#e3f0ff 100%);margin-bottom:30px;">
+    <h3 style="color:#217dbb;margin-top:0;">Staff Product Assignments <span style="font-size:1.1em;">&#128188;</span></h3>
+    {% if assignment_map %}
+      {% for staff_id, staff in assignment_map.items() %}
+        <div style="margin-bottom:18px;">
+          <h4 style="color:#2980b9;margin-bottom:8px;">👤 {{ staff.username }}</h4>
+          <table class="styled-table" style="margin-bottom:0;">
             <thead>
-                <tr>
-                    <th>Product</th>
-                    <th>Allotted</th>
-                    <th>Remaining</th>
-                </tr>
+              <tr>
+                <th>Product</th>
+                <th>Allotted</th>
+                <th>Remaining</th>
+              </tr>
             </thead>
             <tbody>
-                {% for prod in staff.products %}
-                <tr>
-                    <td>{{ prod.product_name }}</td>
-                    <td>{{ prod.quantity_allotted }}</td>
-                    <td>{{ prod.quantity_remaining }}</td>
-                </tr>
-                {% endfor %}
+              {% for prod in staff.products %}
+              <tr>
+                <td>{{ prod.product_name }}</td>
+                <td>{{ prod.quantity_allotted }}</td>
+                <td>{{ prod.quantity_remaining }}</td>
+              </tr>
+              {% endfor %}
             </tbody>
-        </table>
-    {% endfor %}
-{% else %}
-    <p>No product assignments yet.</p>
-{% endif %}
+          </table>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p style="color:#888;">No product assignments yet.</p>
+    {% endif %}
+  </div>
 
-<!-- Assignment Form -->
-<h3>Assign Product to Staff</h3>
-<form method="POST" class="form-inline mb-3">
-    <div class="form-group mr-2">
+  <!-- Assignment Form -->
+  <div class="card" style="background:linear-gradient(120deg,#e3f0ff 80%,#f8fafc 100%);margin-bottom:0;">
+    <h3 style="color:#217dbb;margin-top:0;">Assign Product to Staff <span style="font-size:1.1em;">&#10133;</span></h3>
+    <form method="POST" class="form-inline mb-3" style="display:flex;flex-wrap:wrap;gap:18px;align-items:flex-end;">
+      <div style="flex:1;min-width:180px;">
         <label for="staff_id">Staff:</label>
-        <select name="staff_id" id="staff_id" class="form-control ml-2" required>
-            <option value="">Select Staff</option>
-            {% for s in staff_users %}
-                <option value="{{ s[0] }}">{{ s[1] }}</option>
-            {% endfor %}
+        <select name="staff_id" id="staff_id" class="form-control" required>
+          <option value="">Select Staff</option>
+          {% for s in staff_users %}
+            <option value="{{ s[0] }}">{{ s[1] }}</option>
+          {% endfor %}
         </select>
-    </div>
-    <div class="form-group mr-2">
+      </div>
+      <div style="flex:1;min-width:180px;">
         <label for="product_id">Product:</label>
-        <select name="product_id" id="product_id" class="form-control ml-2" required>
-            <option value="">Select Product</option>
-            {% for p in products %}
-                <option value="{{ p[0] }}">{{ p[1] }}</option>
-            {% endfor %}
+        <select name="product_id" id="product_id" class="form-control" required>
+          <option value="">Select Product</option>
+          {% for p in products %}
+            <option value="{{ p[0] }}">{{ p[1] }}</option>
+          {% endfor %}
         </select>
-    </div>
-    <div class="form-group mr-2">
+      </div>
+      <div style="flex:1;min-width:120px;">
         <label for="quantity">Quantity:</label>
-        <input type="number" name="quantity" id="quantity" class="form-control ml-2" min="1" required>
-    </div>
-    <button type="submit" class="btn btn-primary">Assign</button>
-</form>
+        <input type="number" name="quantity" id="quantity" class="form-control" min="1" required>
+      </div>
+      <div style="flex-basis:100px;">
+        <button type="submit" class="submit-btn" style="margin-top:0;width:100%;font-size:1.1em;">Assign <span style="font-size:1.1em;">&#10148;</span></button>
+      </div>
+    </form>
+  </div>
 
-<p><a href="/dashboard">&larr; Back to Dashboard</a></p>
+  <p style="margin-top:30px;"><a href="/dashboard">&larr; Back to Dashboard</a></p>
+</div>
 {% endblock %}
