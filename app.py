@@ -860,10 +860,11 @@ def assign_inventory():
             return redirect("/assign_inventory")
 
         # Check available stock
+        print(f"DEBUG: Submitted product_id={product_id}")
         product = run_query("SELECT quantity_in_stock FROM products WHERE product_id = ?", (product_id,))
         print(f"DEBUG: Assigning product_id={product_id}, quantity_in_stock={product[0][0] if product else 'N/A'}, requested={quantity}")
         if not product:
-            flash("❌ Product not found in central inventory.")
+            flash(f"❌ Product not found in central inventory. Submitted product_id: {product_id}")
             return redirect("/assign_inventory")
         if int(product[0][0]) < quantity:
             flash(f"❌ Not enough stock in central inventory. Available: {product[0][0]}, Requested: {quantity}")
@@ -969,10 +970,11 @@ def admin_inventory_overview():
             return redirect("/admin_inventory_overview")
 
         # Check available stock
+        print(f"DEBUG: [Admin Overview] Submitted product_id={product_id}")
         product = run_query("SELECT quantity_in_stock FROM products WHERE product_id = ?", (product_id,))
         print(f"DEBUG: [Admin Overview] Assigning product_id={product_id}, quantity_in_stock={product[0][0] if product else 'N/A'}, requested={quantity}")
         if not product:
-            flash("❌ Product not found in central inventory.")
+            flash(f"❌ Product not found in central inventory. Submitted product_id: {product_id}")
             return redirect("/admin_inventory_overview")
         if int(product[0][0]) < quantity:
             flash(f"❌ Not enough stock in central inventory. Available: {product[0][0]}, Requested: {quantity}")
