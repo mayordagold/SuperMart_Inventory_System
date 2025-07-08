@@ -171,15 +171,14 @@ def add_product():
             flash(f"Product '{name}' already exists.")
             return redirect("/add_product")
 
-        # Insert new product
+        # Generate a unique product_id
+        from uuid import uuid4
+        product_id = str(uuid4())
+        # Insert new product with product_id
         run_query("""
-            INSERT INTO products (name, price, quantity_in_stock, category, expiry_date, supplier)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (name, price, quantity, category, expiry, supplier), fetch=False)
-
-        # Retrieve new product_id
-        product_id_row = run_query("SELECT product_id FROM products WHERE name = ?", (name,))
-        product_id = product_id_row[0][0] if product_id_row and product_id_row[0][0] else "N/A"
+            INSERT INTO products (product_id, name, price, quantity_in_stock, category, expiry_date, supplier)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (product_id, name, price, quantity, category, expiry, supplier), fetch=False)
 
         # Log addition in inventory_log (always provide a non-null product_id)
         run_query("""
