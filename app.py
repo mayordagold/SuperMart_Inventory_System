@@ -139,7 +139,6 @@ def add_product():
         return redirect("/")
 
     categories = CATEGORIES
-    suppliers = SUPPLIERS
 
     if request.method == "POST":
         name = request.form["name"].strip().lower()
@@ -191,7 +190,7 @@ def add_product():
         return redirect("/inventory")
 
     from datetime import datetime
-    return render_template("add_product.html", categories=categories, suppliers=suppliers, now=datetime.now())
+    return render_template("add_product.html", categories=categories, now=datetime.now())
 
 @app.route("/create_user", methods=["GET", "POST"])
 def create_user():
