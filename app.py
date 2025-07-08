@@ -947,6 +947,12 @@ def admin_inventory_overview():
         now=datetime.now()
     )
 
+# Help Page Route
+@app.route("/help")
+def help_page():
+    from datetime import datetime
+    return render_template("help.html", now=datetime.now())
+
 # Error Handlers
 @app.errorhandler(404)
 def not_found(e):
