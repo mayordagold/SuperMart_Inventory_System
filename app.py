@@ -42,7 +42,6 @@ def restock_log():
         ORDER BY il.timestamp DESC
     """)
     
-    from datetime import datetime
     return render_template("restock_log.html", logs=logs, now=datetime.now())
 
 @app.route("/inventory")
@@ -51,18 +50,27 @@ def inventory():
         flash("⛔ Login required to view inventory.")
         return redirect("/")
 
-    # Fetch all products: include product_id for future actions
-    products = run_query("""
-        SELECT product_id, name, price, quantity_in_stock, category, expiry_date, supplier
-        FROM products
-        ORDER BY name ASC
-    """)
+    # Restrict staff to their own inventory
+    if session.get("role") == "staff":
+        products = run_query("""
+            SELECT p.product_id, p.name, p.price, si.quantity_remaining, p.category, p.expiry_date, p.supplier
+            FROM staff_inventory si
+            JOIN products p ON si.product_id = p.product_id
+            WHERE si.staff_id = ? AND si.quantity_remaining > 0
+            ORDER BY p.name ASC
+        """, (session["user_id"],))
+    else:
+        # Admin sees all products
+        products = run_query("""
+            SELECT product_id, name, price, quantity_in_stock, category, expiry_date, supplier
+            FROM products
+            ORDER BY name ASC
+        """)
 
     # Identify products with stock less than 5 (ensure type safety)
     low_stock = [p for p in products if int(p[3]) < 5]
 
     # Identify expired and near-expiry products
-    from datetime import datetime, timedelta
     today = datetime.now().date()
     near_expiry_days = 30
     expired = set()
@@ -128,7 +136,6 @@ def transactions():
     query += " ORDER BY il.timestamp DESC"
     logs = run_query(query, params)
 
-    from datetime import datetime
     return render_template("transactions.html", logs=logs, filters=filters, now=datetime.now())
 
 
@@ -189,7 +196,6 @@ def add_product():
         flash(f"✅ Product '{name}' added and logged successfully.")
         return redirect("/inventory")
 
-    from datetime import datetime
     return render_template("add_product.html", categories=categories, now=datetime.now())
 
 @app.route("/create_user", methods=["GET", "POST"])
@@ -232,7 +238,6 @@ def create_user():
         flash(f"✅ {role.capitalize()} user '{username}' created and logged.")
         return redirect("/create_user")
 
-    from datetime import datetime
     return render_template("create_user.html", now=datetime.now())
 
 @app.route("/", methods=["GET", "POST"])
@@ -276,51 +281,107 @@ def dashboard():
     role = session.get("role")
     today = date.today().isoformat()
 
-    total_sales = run_query("SELECT SUM(price * quantity) FROM transactions")[0][0] or 0
-    today_sales = run_query("SELECT SUM(price * quantity) FROM transactions WHERE DATE(timestamp) = ?", (today,))[0][0] or 0
-    low_stock_count = run_query("SELECT COUNT(*) FROM products WHERE quantity_in_stock < 5")[0][0]
-    top_products = run_query("""
-        SELECT name, SUM(quantity) as qty_sold
-        FROM transactions
-        GROUP BY product_id
-        ORDER BY qty_sold DESC
-        LIMIT 5
-    """)
-
-    # --- Analytics Data for Charts ---
-    # Sales Trend (last 14 days)
-    sales_trend_data = []
-    for i in range(13, -1, -1):
-        day = (date.today() - timedelta(days=i)).isoformat()
-        total = run_query("SELECT SUM(price * quantity) FROM transactions WHERE DATE(timestamp) = ?", (day,))[0][0] or 0
-        sales_trend_data.append({"date": day, "total": total})
-
-    # Stock Level Distribution (top 10 by stock)
-    stock_rows = run_query("SELECT name, quantity_in_stock FROM products ORDER BY quantity_in_stock DESC LIMIT 10")
-    stock_level_data = [{"name": r[0], "stock": r[1]} for r in stock_rows]
-
-    # Expiry Statistics
-    products = run_query("SELECT expiry_date FROM products")
-    expired = 0
-    near_expiry = 0
-    good = 0
-    now = datetime.now().date()
-    for (expiry_str,) in products:
-        try:
-            expiry = datetime.strptime(expiry_str, "%Y-%m-%d").date()
-            if expiry < now:
-                expired += 1
-            elif (expiry - now).days <= 30:
-                near_expiry += 1
-            else:
-                good += 1
-        except Exception:
-            continue
-    expiry_data = [
-        {"label": "Expired", "count": expired},
-        {"label": "Near Expiry", "count": near_expiry},
-        {"label": "Good", "count": good},
-    ]
+    if role == "staff":
+        # Staff: Only their own sales and inventory
+        total_sales = run_query("SELECT SUM(price * quantity) FROM transactions WHERE user_id = ?", (session["user_id"],))[0][0] or 0
+        today_sales = run_query("SELECT SUM(price * quantity) FROM transactions WHERE user_id = ? AND DATE(timestamp) = ?", (session["user_id"], today))[0][0] or 0
+        # Staff inventory: count of products assigned to them with remaining > 0
+        low_stock_count = run_query("SELECT COUNT(*) FROM staff_inventory WHERE staff_id = ? AND quantity_remaining < 5", (session["user_id"],))[0][0]
+        top_products = run_query("""
+            SELECT p.name, SUM(t.quantity) as qty_sold
+            FROM transactions t
+            JOIN products p ON t.product_id = p.product_id
+            WHERE t.user_id = ?
+            GROUP BY t.product_id
+            ORDER BY qty_sold DESC
+            LIMIT 5
+        """, (session["user_id"],))
+        # Sales trend (last 14 days)
+        sales_trend_data = []
+        for i in range(13, -1, -1):
+            day = (date.today() - timedelta(days=i)).isoformat()
+            total = run_query("SELECT SUM(price * quantity) FROM transactions WHERE user_id = ? AND DATE(timestamp) = ?", (session["user_id"], day))[0][0] or 0
+            sales_trend_data.append({"date": day, "total": total})
+        # Staff inventory for stock level
+        stock_rows = run_query("""
+            SELECT p.name, si.quantity_remaining
+            FROM staff_inventory si
+            JOIN products p ON si.product_id = p.product_id
+            WHERE si.staff_id = ?
+            ORDER BY si.quantity_remaining DESC LIMIT 10
+        """, (session["user_id"],))
+        stock_level_data = [{"name": r[0], "stock": r[1]} for r in stock_rows]
+        # Expiry stats for staff inventory
+        products = run_query("""
+            SELECT p.expiry_date
+            FROM staff_inventory si
+            JOIN products p ON si.product_id = p.product_id
+            WHERE si.staff_id = ?
+        """, (session["user_id"],))
+        expired = 0
+        near_expiry = 0
+        good = 0
+        now = datetime.now().date()
+        for (expiry_str,) in products:
+            try:
+                expiry = datetime.strptime(expiry_str, "%Y-%m-%d").date()
+                if expiry < now:
+                    expired += 1
+                elif (expiry - now).days <= 30:
+                    near_expiry += 1
+                else:
+                    good += 1
+            except Exception:
+                continue
+        expiry_data = [
+            {"label": "Expired", "count": expired},
+            {"label": "Near Expiry", "count": near_expiry},
+            {"label": "Good", "count": good},
+        ]
+    else:
+        # Admin: All stats
+        total_sales = run_query("SELECT SUM(price * quantity) FROM transactions")[0][0] or 0
+        today_sales = run_query("SELECT SUM(price * quantity) FROM transactions WHERE DATE(timestamp) = ?", (today,))[0][0] or 0
+        low_stock_count = run_query("SELECT COUNT(*) FROM products WHERE quantity_in_stock < 5")[0][0]
+        top_products = run_query("""
+            SELECT name, SUM(quantity) as qty_sold
+            FROM transactions
+            GROUP BY product_id
+            ORDER BY qty_sold DESC
+            LIMIT 5
+        """)
+        # --- Analytics Data for Charts ---
+        # Sales Trend (last 14 days)
+        sales_trend_data = []
+        for i in range(13, -1, -1):
+            day = (date.today() - timedelta(days=i)).isoformat()
+            total = run_query("SELECT SUM(price * quantity) FROM transactions WHERE DATE(timestamp) = ?", (day,))[0][0] or 0
+            sales_trend_data.append({"date": day, "total": total})
+        # Stock Level Distribution (top 10 by stock)
+        stock_rows = run_query("SELECT name, quantity_in_stock FROM products ORDER BY quantity_in_stock DESC LIMIT 10")
+        stock_level_data = [{"name": r[0], "stock": r[1]} for r in stock_rows]
+        # Expiry Statistics
+        products = run_query("SELECT expiry_date FROM products")
+        expired = 0
+        near_expiry = 0
+        good = 0
+        now = datetime.now().date()
+        for (expiry_str,) in products:
+            try:
+                expiry = datetime.strptime(expiry_str, "%Y-%m-%d").date()
+                if expiry < now:
+                    expired += 1
+                elif (expiry - now).days <= 30:
+                    near_expiry += 1
+                else:
+                    good += 1
+            except Exception:
+                continue
+        expiry_data = [
+            {"label": "Expired", "count": expired},
+            {"label": "Near Expiry", "count": near_expiry},
+            {"label": "Good", "count": good},
+        ]
 
     return render_template(
         "dashboard.html",
@@ -371,7 +432,6 @@ def manage_users():
             flash("🗑️ User deleted successfully.")
 
     users = run_query("SELECT user_id, username, role, status FROM users ORDER BY username")
-    from datetime import datetime
     return render_template("manage_users.html", users=users, now=datetime.now())
 
 
@@ -382,7 +442,6 @@ def audit_log():
         return redirect("/")
 
     logs = run_query("SELECT actor, action, timestamp FROM audit_log ORDER BY timestamp DESC")
-    from datetime import datetime
     return render_template("audit_log.html", logs=logs, now=datetime.now())
 
 
@@ -445,7 +504,6 @@ def sell():
             flash("🗑️ Item removed from cart.")
 
     cart_items = run_query("SELECT * FROM cart")
-    from datetime import datetime
     return render_template("sell.html", cart=cart_items, products=products, search_result=search_result, now=datetime.now())
 
 # --- AJAX CART ENDPOINTS ---
@@ -613,7 +671,6 @@ def receipt():
         flash("No recent sale to display.")
         return redirect("/sell")
 
-    from datetime import datetime
     return render_template("receipt.html",
         receipt=last_sale["items"],
         cashier=last_sale["cashier"],
@@ -776,7 +833,6 @@ def restock():
         flash("✅ Product restocked successfully.")
         return redirect("/inventory")
 
-    from datetime import datetime
     return render_template("restock.html", products=products, now=datetime.now())
 
 # --- Assign Inventory to Staff (Admin Only) ---
@@ -830,7 +886,6 @@ def assign_inventory():
         flash("✅ Product allotted to staff successfully.")
         return redirect("/assign_inventory")
 
-    from datetime import datetime
     return render_template("assign_inventory.html", staff_users=staff_users, products=products, now=datetime.now())
 
 # --- Staff Inventory and Sales Report (Admin Only) ---
@@ -862,7 +917,6 @@ def staff_inventory_report():
             "inventory": inventory,
             "sales": sales
         })
-    from datetime import datetime
     return render_template("staff_inventory_report.html", staff_data=staff_data, now=datetime.now())
 
 # --- Admin Inventory Overview (Unified Management) ---
@@ -937,7 +991,6 @@ def admin_inventory_overview():
         flash("✅ Product allotted to staff successfully.")
         return redirect("/admin_inventory_overview")
 
-    from datetime import datetime
     return render_template(
         "admin_inventory_overview.html",
         products=products,
@@ -949,7 +1002,6 @@ def admin_inventory_overview():
 # Help Page Route
 @app.route("/help")
 def help_page():
-    from datetime import datetime
     return render_template("help.html", now=datetime.now())
 
 # Error Handlers
