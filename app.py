@@ -393,9 +393,19 @@ def sell():
         flash("⛔ Login required.")
         return redirect("/")
 
-    # Fetch all products for dropdown
-    products = run_query("SELECT product_id, name, price, quantity_in_stock FROM products ORDER BY name ASC")
     search_result = None
+    # Restrict staff to their own inventory
+    if session.get("role") == "staff":
+        products = run_query("""
+            SELECT p.product_id, p.name, p.price, si.quantity_remaining
+            FROM staff_inventory si
+            JOIN products p ON si.product_id = p.product_id
+            WHERE si.staff_id = ? AND si.quantity_remaining > 0
+            ORDER BY p.name ASC
+        """, (session["user_id"],))
+    else:
+        # Admin can see all products
+        products = run_query("SELECT product_id, name, price, quantity_in_stock FROM products ORDER BY name ASC")
 
     if request.method == "POST":
         action = request.form.get("action")
@@ -550,23 +560,40 @@ def checkout():
 
         # Deduct stock if not custom
         if not str(product_id).startswith("custom_"):
-            product = run_query("SELECT quantity_in_stock FROM products WHERE product_id = ?", (str(product_id),))
-            if product:
-                try:
-                    in_stock = int(product[0][0])
-                    if in_stock >= int(quantity):
-                        run_query("""
-                            UPDATE products SET quantity_in_stock = quantity_in_stock - ?
-                            WHERE product_id = ?
-                        """, (int(quantity), str(product_id)), fetch=False)
-                        # Show new stock after update
-                        # new_stock = in_stock - int(quantity)
-                    else:
-                        flash(f"⚠ Not enough stock for {name}. Only {in_stock} left.")
-                except Exception as e:
-                    flash(f"❌ Error updating stock for {name}: {e}")
+            if session.get("role") == "staff":
+                # Deduct from staff_inventory
+                staff_inv = run_query("SELECT quantity_remaining FROM staff_inventory WHERE staff_id = ? AND product_id = ?", (session["user_id"], product_id))
+                if staff_inv:
+                    try:
+                        remaining = int(staff_inv[0][0])
+                        if remaining >= int(quantity):
+                            run_query("""
+                                UPDATE staff_inventory SET quantity_remaining = quantity_remaining - ?
+                                WHERE staff_id = ? AND product_id = ?
+                            """, (int(quantity), session["user_id"], product_id), fetch=False)
+                        else:
+                            flash(f"⚠ Not enough stock for {name} in your inventory. Only {remaining} left.")
+                    except Exception as e:
+                        flash(f"❌ Error updating your inventory for {name}: {e}")
+                else:
+                    flash(f"❌ Inventory mismatch: {product_id} not found in your staff inventory.")
             else:
-                flash(f"❌ Inventory mismatch: {product_id} not found.")
+                # Admin: Deduct from central inventory
+                product = run_query("SELECT quantity_in_stock FROM products WHERE product_id = ?", (str(product_id),))
+                if product:
+                    try:
+                        in_stock = int(product[0][0])
+                        if in_stock >= int(quantity):
+                            run_query("""
+                                UPDATE products SET quantity_in_stock = quantity_in_stock - ?
+                                WHERE product_id = ?
+                            """, (int(quantity), str(product_id)), fetch=False)
+                        else:
+                            flash(f"⚠ Not enough stock for {name}. Only {in_stock} left.")
+                    except Exception as e:
+                        flash(f"❌ Error updating stock for {name}: {e}")
+                else:
+                    flash(f"❌ Inventory mismatch: {product_id} not found.")
 
     session["last_sale"] = {
         "items": receipt_data,
@@ -752,6 +779,92 @@ def restock():
 
     from datetime import datetime
     return render_template("restock.html", products=products, now=datetime.now())
+
+# --- Assign Inventory to Staff (Admin Only) ---
+@app.route("/assign_inventory", methods=["GET", "POST"])
+def assign_inventory():
+    if "user_id" not in session or session.get("role") != "admin":
+        flash("⛔ Admin access only.")
+        return redirect("/")
+
+    # Fetch all staff users
+    staff_users = run_query("SELECT user_id, username FROM users WHERE role = 'staff' AND status = 'active' ORDER BY username")
+    # Fetch all products
+    products = run_query("SELECT product_id, name, quantity_in_stock FROM products ORDER BY name ASC")
+
+    if request.method == "POST":
+        staff_id = request.form.get("staff_id")
+        product_id = request.form.get("product_id")
+        try:
+            quantity = int(request.form.get("quantity"))
+            if quantity <= 0:
+                flash("❌ Quantity must be positive.")
+                return redirect("/assign_inventory")
+        except Exception:
+            flash("❌ Invalid quantity.")
+            return redirect("/assign_inventory")
+
+        # Check available stock
+        product = run_query("SELECT quantity_in_stock FROM products WHERE product_id = ?", (product_id,))
+        if not product or int(product[0][0]) < quantity:
+            flash("❌ Not enough stock in central inventory.")
+            return redirect("/assign_inventory")
+
+        # Deduct from central inventory
+        run_query("UPDATE products SET quantity_in_stock = quantity_in_stock - ? WHERE product_id = ?", (quantity, product_id), fetch=False)
+
+        # Add or update staff_inventory
+        existing = run_query("SELECT id, quantity_allotted, quantity_remaining FROM staff_inventory WHERE staff_id = ? AND product_id = ?", (staff_id, product_id))
+        if existing:
+            inv_id, qty_allotted, qty_remaining = existing[0]
+            run_query(
+                "UPDATE staff_inventory SET quantity_allotted = quantity_allotted + ?, quantity_remaining = quantity_remaining + ? WHERE id = ?",
+                (quantity, quantity, inv_id),
+                fetch=False
+            )
+        else:
+            run_query(
+                "INSERT INTO staff_inventory (staff_id, product_id, quantity_allotted, quantity_remaining) VALUES (?, ?, ?, ?)",
+                (staff_id, product_id, quantity, quantity),
+                fetch=False
+            )
+        flash("✅ Product allotted to staff successfully.")
+        return redirect("/assign_inventory")
+
+    from datetime import datetime
+    return render_template("assign_inventory.html", staff_users=staff_users, products=products, now=datetime.now())
+
+# --- Staff Inventory and Sales Report (Admin Only) ---
+@app.route("/staff_inventory_report")
+def staff_inventory_report():
+    if "user_id" not in session or session.get("role") != "admin":
+        flash("⛔ Admin access only.")
+        return redirect("/")
+
+    # Fetch all staff
+    staff_users = run_query("SELECT user_id, username FROM users WHERE role = 'staff' ORDER BY username")
+    # For each staff, fetch their inventory and sales
+    staff_data = []
+    for staff_id, username in staff_users:
+        inventory = run_query("""
+            SELECT p.name, si.quantity_allotted, si.quantity_remaining
+            FROM staff_inventory si
+            JOIN products p ON si.product_id = p.product_id
+            WHERE si.staff_id = ?
+        """, (staff_id,))
+        sales = run_query("""
+            SELECT t.name, SUM(t.quantity) as qty_sold
+            FROM transactions t
+            WHERE t.user_id = ?
+            GROUP BY t.product_id
+        """, (staff_id,))
+        staff_data.append({
+            "username": username,
+            "inventory": inventory,
+            "sales": sales
+        })
+    from datetime import datetime
+    return render_template("staff_inventory_report.html", staff_data=staff_data, now=datetime.now())
 
 # Error Handlers
 @app.errorhandler(404)

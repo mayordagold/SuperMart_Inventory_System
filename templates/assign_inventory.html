@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Assign Inventory to Staff</h2>
+<form method="POST" style="margin-bottom: 2em;">
+  <div>
+    <label for="staff_id">Select Staff:</label>
+    <select name="staff_id" id="staff_id" required>
+      <option value="">-- Select Staff --</option>
+      {% for staff in staff_users %}
+        <option value="{{ staff[0] }}">{{ staff[1] }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="product_id">Select Product:</label>
+    <select name="product_id" id="product_id" required>
+      <option value="">-- Select Product --</option>
+      {% for product in products %}
+        <option value="{{ product[0] }}">{{ product[1] }} (In Stock: {{ product[2] }})</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="quantity">Quantity to Assign:</label>
+    <input type="number" name="quantity" id="quantity" min="1" required>
+  </div>
+  <button type="submit">Assign</button>
+</form>
+
+<p><a href="/dashboard">&larr; Back to Dashboard</a></p>
+
+{% endblock %}
