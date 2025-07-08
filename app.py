@@ -1004,6 +1004,7 @@ def admin_inventory_overview():
         flash("✅ Product allotted to staff successfully.")
         return redirect("/admin_inventory_overview")
 
+    print("DEBUG: products for dropdown:", products)
     return render_template(
         "admin_inventory_overview.html",
         products=products,
