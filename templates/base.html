@@ -9,7 +9,7 @@
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
 
     <div class="navbar no-print" style="margin-bottom: 30px;">
         <div><a href="/dashboard">🏠 Dashboard</a></div>

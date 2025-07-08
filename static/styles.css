@@ -6,6 +6,19 @@ body {
   padding: 20px;
 }
 
+/* ✨ Fascinating animated background for login page */
+.login-bg {
+  background: linear-gradient(-45deg, #ffecd2, #fcb69f, #a1c4fd, #c2e9fb, #fbc2eb, #f9d423);
+  background-size: 400% 400%;
+  animation: gradientBG 12s ease infinite;
+}
+
+@keyframes gradientBG {
+  0% {background-position: 0% 50%;}
+  50% {background-position: 100% 50%;}
+  100% {background-position: 0% 50%;}
+}
+
 .page-title {
   text-align: center;
   color: #2c3e50;
