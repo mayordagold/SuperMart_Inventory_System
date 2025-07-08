@@ -148,7 +148,7 @@ def add_product():
     categories = CATEGORIES
 
     if request.method == "POST":
-        name = request.form["name"].strip().lower()
+        name = request.form["name"].strip()
         try:
             price = float(request.form["price"])
             quantity = int(request.form["quantity"])
@@ -970,7 +970,7 @@ def admin_inventory_overview():
             return redirect("/admin_inventory_overview")
 
         # Check available stock
-        print(f"DEBUG: [Admin Overview] Submitted product_id={product_id}")
+        print(f"DEBUG: [Admin Overview] Submitted staff_id={staff_id}, product_id={product_id}")
         product = run_query("SELECT quantity_in_stock FROM products WHERE product_id = ?", (product_id,))
         print(f"DEBUG: [Admin Overview] Assigning product_id={product_id}, quantity_in_stock={product[0][0] if product else 'N/A'}, requested={quantity}")
         if not product:
@@ -985,6 +985,7 @@ def admin_inventory_overview():
 
         # Add or update staff_inventory
         existing = run_query("SELECT id, quantity_allotted, quantity_remaining FROM staff_inventory WHERE staff_id = ? AND product_id = ?", (staff_id, product_id))
+        print(f"DEBUG: [Admin Overview] staff_inventory existing={existing}")
         if existing:
             inv_id, qty_allotted, qty_remaining = existing[0]
             run_query(
@@ -992,12 +993,14 @@ def admin_inventory_overview():
                 (quantity, quantity, inv_id),
                 fetch=False
             )
+            print(f"DEBUG: [Admin Overview] Updated staff_inventory for staff_id={staff_id}, product_id={product_id}")
         else:
             run_query(
                 "INSERT INTO staff_inventory (staff_id, product_id, quantity_allotted, quantity_remaining) VALUES (?, ?, ?, ?)",
                 (staff_id, product_id, quantity, quantity),
                 fetch=False
             )
+            print(f"DEBUG: [Admin Overview] Inserted new staff_inventory for staff_id={staff_id}, product_id={product_id}")
         flash("✅ Product allotted to staff successfully.")
         return redirect("/admin_inventory_overview")
 
