@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Users{% endblock %}
+
+{% block content %}
+  <div class="form-box" style="max-width: 800px; margin: 40px auto 0 auto;">
+    <h2 class="form-title">👥 Manage Users</h2>
+    <table class="styled-table" style="margin-top: 10px;">
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+        <tr>
+          <td>{{ user[1] }}</td>
+          <td>{{ user[2] }}</td>
+          <td>{{ user[3] }}</td>
+          <td>
+            <form method="POST" style="display:inline;">
+              <input type="hidden" name="user_id" value="{{ user[0] }}">
+              <select name="action">
+                <option value="deactivate">Deactivate</option>
+                <option value="activate">Activate</option>
+                <option value="promote">Promote to Admin</option>
+                <option value="demote">Demote to Staff</option>
+                <option value="delete">Delete</option>
+              </select>
+              <button type="submit" class="action-btn" style="background:#e67e22;">Apply</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

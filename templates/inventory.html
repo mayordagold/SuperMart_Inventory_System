@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}📋 Inventory{% endblock %}
+
+{% block content %}
+  <div class="form-box" style="max-width: 900px; margin: 40px auto 0 auto;">
+    <h2 class="form-title">📦 Product Inventory</h2>
+
+    {% if low_stock %}
+      <div class="low-stock-banner">
+        ⚠️ {{ low_stock|length }} product{{ 's' if low_stock|length > 1 else '' }} low in stock!
+      </div>
+    {% endif %}
+
+    <!-- Export Button -->
+    <div style="text-align: right; margin-bottom: 12px;">
+      <form method="GET" action="/export_inventory">
+        <button type="submit" class="btn-export">⬇️ Export Inventory</button>
+      </form>
+    </div>
+
+    <table class="styled-table" style="margin-top: 10px;">
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Price (₦)</th>
+          <th>Qty in Stock</th>
+          <th>Category</th>
+          <th>Expiry Date</th>
+          <th>Supplier</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in products %}
+          {% set row_class = [] %}
+          {% if p[3] < 5 %} {% set _ = row_class.append('low-stock') %} {% endif %}
+          {% if p[0] in expired %} {% set _ = row_class.append('expired') %} {% endif %}
+          {% if p[0] in near_expiry and p[0] not in expired %} {% set _ = row_class.append('near-expiry') %} {% endif %}
+          <tr class="{{ ' '.join(row_class) }}">
+            <td>{{ p[1] }}</td>
+            <td>₦{{ "%.2f"|format(p[2]) }}</td>
+            <td>
+              {{ p[3] }}
+              {% if p[3] == 0 %}
+                <span style="color: #e74c3c; font-weight: bold;">(Out of Stock)</span>
+              {% elif p[3] < 5 %}
+                <span style="color: #e67e22; font-weight: bold;">(Low Stock)</span>
+              {% endif %}
+            </td>
+            <td>{{ p[4] }}</td>
+            <td>
+              {{ p[5] }}
+              {% if p[0] in expired %}
+                <span style="color: #e74c3c; font-weight: bold;">(Expired)</span>
+              {% elif p[0] in near_expiry %}
+                <span style="color: #e67e22; font-weight: bold;">(Near Expiry)</span>
+              {% endif %}
+            </td>
+            <td>{{ p[6] }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

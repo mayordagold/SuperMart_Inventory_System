@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Inventory Management{% endblock %}
+{% block content %}
+<div style="max-width: 950px; margin: 0 auto; padding: 0 10px;">
+  <div style="text-align:center; margin-bottom: 32px;">
+    <span style="font-size:2.7rem; color:#3498db; vertical-align:middle;">&#128230;</span>
+    <h1 style="display:inline; font-size:2.1rem; color:#2c3e50; margin-left:12px; vertical-align:middle;">Inventory Management</h1>
+    <div style="color:#888; font-size:1.1rem; margin-top:8px;">Assign, monitor, and oversee staff inventory at a glance.</div>
+  </div>
+
+  <div style="background: #fff; border-radius: 18px; box-shadow: 0 2px 16px rgba(44,62,80,0.08); padding: 36px 28px 28px 28px;">
+    <!-- Master Inventory Section -->
+    <h2 style="color:#217dbb; font-size:1.3rem; margin-top:0;">Admin Inventory</h2>
+    <table class="styled-table" style="margin-bottom: 32px;">
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Stock</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in products %}
+        <tr>
+          <td style="font-weight:500;">{{ p[1] }}</td>
+          <td style="color:#217dbb; font-weight:bold;">{{ p[2] }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- Staff Assignments Section -->
+    <h2 style="color:#217dbb; font-size:1.3rem; margin-top:0;">Staff Inventory Assignments</h2>
+    {% if assignment_map %}
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:22px; margin-bottom:32px;">
+        {% for staff_id, staff in assignment_map.items() %}
+        <div style="background:linear-gradient(120deg,#e3f0ff 80%,#f8fafc 100%); border-radius:12px; box-shadow:0 1px 6px rgba(44,62,80,0.06); padding:18px 16px 10px 16px;">
+          <div style="font-size:1.1rem; color:#2980b9; font-weight:600; margin-bottom:8px;">👤 {{ staff.username }}</div>
+          <table style="width:100%; font-size:0.98rem;">
+            <thead>
+              <tr style="background:#f4f8fb;">
+                <th style="color:#217dbb;">Product</th>
+                <th style="color:#217dbb;">Allotted</th>
+                <th style="color:#217dbb;">Remaining</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for prod in staff.products %}
+              <tr>
+                <td>{{ prod.product_name }}</td>
+                <td style="color:#2980b9; font-weight:500;">{{ prod.quantity_allotted }}</td>
+                <td style="color:#27ae60; font-weight:500;">{{ prod.quantity_remaining }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div style="color:#888; margin-bottom:32px;">No product assignments yet.</div>
+    {% endif %}
+
+    <!-- Assignment Form Section -->
+    <div style="background:linear-gradient(120deg,#f8fafc 80%,#e3f0ff 100%); border-radius:12px; box-shadow:0 1px 6px rgba(44,62,80,0.06); padding:24px 18px 18px 18px; max-width:520px; margin:0 auto;">
+      <h2 style="color:#217dbb; font-size:1.15rem; margin-top:0;">Assign Product from Admin Inventory to Staff Inventory</h2>
+      {% if products|length == 0 %}
+        <div style="color:#c0392b; font-weight:bold; margin-bottom:10px;">No products in central inventory. Please add products first.</div>
+        <button class="submit-btn" style="width:100%;" disabled>Add Product to Assign</button>
+      {% else %}
+      <form method="POST" style="display:flex; flex-wrap:wrap; gap:16px; align-items:flex-end;">
+        <div style="flex:1; min-width:140px;">
+          <label for="staff_id">Staff:</label>
+          <select name="staff_id" id="staff_id" class="form-control" required>
+            <option value="">Select Staff</option>
+            {% for s in staff_users %}
+              <option value="{{ s[0] }}">{{ s[1] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div style="flex:1; min-width:140px;">
+          <label for="product_id">Product:</label>
+          <select name="product_id" id="product_id" class="form-control" required>
+            <option value="">Select Product</option>
+            {% for p in products %}
+              <option value="{{ p[0] }}">{{ p[1] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div style="flex:1; min-width:100px;">
+          <label for="quantity">Quantity:</label>
+          <input type="number" name="quantity" id="quantity" class="form-control" min="1" required>
+        </div>
+        <div style="flex-basis:100px;">
+          <button type="submit" class="submit-btn" style="margin-top:0;width:100%;font-size:1.1em;">Assign &#10148;</button>
+        </div>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  <p style="margin-top:30px; text-align:center;"><a href="/dashboard">&larr; Back to Dashboard</a></p>
+</div>
+{% endblock %}

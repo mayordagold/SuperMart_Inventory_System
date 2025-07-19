@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Staff Inventory & Sales Report</h2>
+{% for staff in staff_data %}
+  <div style="margin-bottom:2em; border:1px solid #ccc; padding:1em; border-radius:8px;">
+    <h3>{{ staff.username|capitalize }}</h3>
+    <strong>Allotted Inventory:</strong>
+    {% if staff.inventory %}
+      <table border="1" cellpadding="5" style="margin-bottom:1em;">
+        <tr>
+          <th>Product</th>
+          <th>Allotted</th>
+          <th>Remaining</th>
+        </tr>
+        {% for inv in staff.inventory %}
+        <tr>
+          <td>{{ inv[0] }}</td>
+          <td>{{ inv[1] }}</td>
+          <td>{{ inv[2] }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    {% else %}
+      <p>No products allotted.</p>
+    {% endif %}
+    <strong>Sales:</strong>
+    {% if staff.sales %}
+      <table border="1" cellpadding="5">
+        <tr>
+          <th>Product</th>
+          <th>Quantity Sold</th>
+        </tr>
+        {% for sale in staff.sales %}
+        <tr>
+          <td>{{ sale[0] }}</td>
+          <td>{{ sale[1] }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    {% else %}
+      <p>No sales yet.</p>
+    {% endif %}
+  </div>
+{% endfor %}
+<p><a href="/dashboard">&larr; Back to Dashboard</a></p>
+{% endblock %}

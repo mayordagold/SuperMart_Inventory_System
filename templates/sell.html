@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Sell Product<script>
+// AJAX Add to Cart
+const sellForm = document.querySelector('.sell-form');
+if (sellForm) {
+  sellForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(sellForm);
+    const resp = await fetch('/ajax/add_to_cart', { method: 'POST', body: formData });
+    const data = await resp.json();
+    document.querySelector('.cart-section tbody').innerHTML = data.cart_html;
+    sellForm.reset();
+  });
+}
+
+// Delegate AJAX Update/Remove in Cart
+const cartSection = document.querySelector('.cart-section');
+if (cartSection) {
+  cartSection.addEventListener('submit', async function(e) {
+    if (e.target.classList.contains('inline-form')) {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      let url = '/ajax/update_cart';
+      if (formData.get('action') === 'remove') url = '/ajax/remove_from_cart';
+      const resp = await fetch(url, { method: 'POST', body: formData });
+      const data = await resp.json();
+      document.querySelector('.cart-section tbody').innerHTML = data.cart_html;
+    }
+  });
+}
+</script>
+{% endblock %}
+
+{% block content %}
+  <div class="form-box" style="max-width: 520px; margin: 40px auto 0 auto;">
+    <h2 class="form-title">🛒 Sell Product</h2>
+    <form method="POST" class="sell-form" style="box-shadow:none; background:transparent; padding:0;">
+      <input type="hidden" name="action" value="add">
+      <label for="product_id">Product:</label>
+      <select name="product_id" id="product_id" required>
+        <option value="" disabled selected>Select a product</option>
+        {% for p in products %}
+          <option value="{{ p[0] }}">{{ p[1] }} (₦{{ '%.2f'|format(p[2]) }}, Stock: {{ p[3] }})</option>
+        {% endfor %}
+      </select>
+      <br><br>
+      <label for="quantity">Quantity:</label>
+      <input type="number" name="quantity" id="quantity" min="1" required>
+      <br><br>
+      <button type="submit" class="btn">Add to Cart</button>
+    </form>
+  </div>
+
+  <div class="cart-section" style="margin-top: 30px;">
+    <h3>🛒 Cart</h3>
+    <table class="styled-table">
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Price</th>
+          <th>Quantity</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in cart %}
+        <tr>
+          <td>{{ item[2] }}</td>
+          <td>₦{{ '%.2f'|format(item[3]) }}</td>
+          <td>
+            <form method="POST" style="display:inline;" class="inline-form">
+              <input type="hidden" name="action" value="update">
+              <input type="hidden" name="product_id" value="{{ item[1] }}">
+              <input type="number" name="new_quantity" value="{{ item[4] }}" min="1" style="width:60px;display:inline-block;">
+              <button type="submit" class="action-btn">Update</button>
+            </form>
+          </td>
+          <td>
+            <form method="POST" style="display:inline;" class="inline-form">
+              <input type="hidden" name="action" value="remove">
+              <input type="hidden" name="product_id" value="{{ item[1] }}">
+              <button type="submit" class="action-btn" style="background:#e74c3c;">Remove</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <form method="POST" action="/checkout">
+      <button type="submit" class="btn">Checkout</button>
+    </form>
+  </div>
+{% endblock %}

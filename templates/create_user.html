@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}👤 Create User{% endblock %}
+
+{% block content %}
+  <form method="POST" class="form-box" style="max-width: 420px; margin: 40px auto 0 auto;">
+    <h2 class="form-title">👤 Create New User</h2>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="flash">{{ messages[0] }}</div>
+      {% endif %}
+    {% endwith %}
+
+    <label for="username">Username</label>
+    <input type="text" name="username" id="username" required>
+
+    <label for="password">Password</label>
+    <input type="password" name="password" id="password" required>
+
+    <label for="role">Role</label>
+    <select name="role" id="role" required>
+      <option value="staff">Staff</option>
+      <option value="admin">Admin</option>
+    </select>
+
+    <button type="submit" class="submit-btn">Create Account</button>
+  </form>
+{% endblock %}

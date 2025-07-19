@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}🏠 Dashboard{% endblock %}
+
+{% block content %}
+  <h2 class="page-title">🏠 Welcome, {{ user|capitalize }} ({{ role }})</h2>
+
+  <!-- 🔢 Key Stats -->
+  <div class="dashboard-cards">
+    <div class="card">
+      <h3>💰 Total Sales</h3>
+      <p>₦{{ "%.2f"|format(total_sales) }}</p>
+    </div>
+    <div class="card">
+      <h3>📅 Today's Sales</h3>
+      <p>₦{{ "%.2f"|format(today_sales) }}</p>
+    </div>
+    <div class="card">
+      <h3>⚠️ Low Stock Items</h3>
+      <p>{{ low_stock_count }}</p>
+    </div>
+  </div>
+
+  <!-- 📊 Analytics Charts -->
+  <div style="margin: 40px 0; display: flex; flex-wrap: wrap; gap: 40px; justify-content: center;">
+    <div>
+      <h3>📈 Sales Trend</h3>
+      <canvas id="salesTrendChart" width="400" height="220"></canvas>
+    </div>
+    <div>
+      <h3>📦 Stock Distribution</h3>
+      <canvas id="stockLevelChart" width="400" height="220"></canvas>
+    </div>
+    <div>
+      <h3>⏰ Expiry Status</h3>
+      <canvas id="expiryChart" width="400" height="220"></canvas>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    // These variables will be filled by backend in the next step
+    const salesTrendData = {{ sales_trend_data|tojson|safe if sales_trend_data is defined else '[]' }};
+    const stockLevelData = {{ stock_level_data|tojson|safe if stock_level_data is defined else '[]' }};
+    const expiryData = {{ expiry_data|tojson|safe if expiry_data is defined else '[]' }};
+
+    // Sales Trend Chart
+    if (document.getElementById('salesTrendChart')) {
+      new Chart(document.getElementById('salesTrendChart').getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: salesTrendData.map(d => d.date),
+          datasets: [{
+            label: 'Sales (₦)',
+            data: salesTrendData.map(d => d.total),
+            borderColor: '#3498db',
+            backgroundColor: 'rgba(52,152,219,0.1)',
+            fill: true
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+    }
+    // Stock Level Chart
+    if (document.getElementById('stockLevelChart')) {
+      new Chart(document.getElementById('stockLevelChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: stockLevelData.map(d => d.name),
+          datasets: [{
+            label: 'Stock',
+            data: stockLevelData.map(d => d.stock),
+            backgroundColor: '#2ecc71'
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+    }
+    // Expiry Chart
+    if (document.getElementById('expiryChart')) {
+      new Chart(document.getElementById('expiryChart').getContext('2d'), {
+        type: 'pie',
+        data: {
+          labels: expiryData.map(d => d.label),
+          datasets: [{
+            data: expiryData.map(d => d.count),
+            backgroundColor: ['#e74c3c', '#e67e22', '#2ecc71']
+          }]
+        },
+        options: { responsive: true }
+      });
+    }
+  </script>
+
+  <!-- 🏆 Top Products -->
+  <h3 style="margin-top: 30px;">🏆 Top-Selling Products</h3>
+  {% if top_products %}
+    <table class="styled-table" style="width: 60%; margin-top: 10px;">
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Quantity Sold</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for prod in top_products %}
+          <tr>
+            <td>{{ prod[0] }}</td>
+            <td>{{ prod[1] }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No sales data available yet.</p>
+  {% endif %}
+
+  <!-- 🔗 Quick Links -->
+  <div class="tiles" style="margin-top: 40px;">
+    <a href="/inventory" class="tile">📦 Inventory</a>
+    <a href="/sell" class="tile">🛍️ Sell Products (POS)</a>
+    <a href="/transactions" class="tile">📜 Transaction History</a>
+
+    {% if role == 'admin' %}
+      <a href="/restock" class="tile">📥 Restock Product</a>
+      <a href="/add_product" class="tile">🆕 Add Product</a>
+    {% endif %}
+  </div>
+{% endblock %}

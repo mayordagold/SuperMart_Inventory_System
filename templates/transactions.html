@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}📘 Transaction History{% endblock %}
+
+{% block styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+{% endblock %}
+
+{% block content %}
+  <div class="form-box" style="max-width: 900px; margin: 40px auto 0 auto;">
+    <h2 class="form-title">📊 Transaction History</h2>
+
+    <form method="get" class="filter-form">
+      Action:
+      <select name="action">
+        <option value="">All</option>
+        <option value="restock" {% if filters.action == 'restock' %}selected{% endif %}>Restock</option>
+        <option value="sale" {% if filters.action == 'sale' %}selected{% endif %}>Sale</option>
+      </select>
+
+      User:
+      <input type="text" name="user" value="{{ filters.user or '' }}" placeholder="username">
+
+      From:
+      <input type="date" name="start_date" value="{{ filters.start_date or '' }}">
+
+      To:
+      <input type="date" name="end_date" value="{{ filters.end_date or '' }}">
+
+      <button type="submit">Filter</button>
+
+      <a href="/export_transactions?action={{ filters.action or '' }}&user={{ filters.user or '' }}&start_date={{ filters.start_date or '' }}&end_date={{ filters.end_date or '' }}"
+         class="btn-export">
+         ⬇️ Export CSV
+      </a>
+    </form>
+
+    <table class="transaction-table" style="margin-top: 10px;">
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>Product</th>
+          <th>Qty Change</th>
+          <th>Action</th>
+          <th>User</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+          <tr>
+            <td>{{ log[0] }}</td>
+            <td>{{ log[1] }}</td>
+            <td class="{{ log[2] }}">{{ log[2]|capitalize }}</td>
+            <td>{{ log[3] }}</td>
+            <td>{{ log[4] }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

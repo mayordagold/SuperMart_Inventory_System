@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Restock Product{% endblock %}
+
+{% block content %}
+  <div class="form-box" style="max-width: 420px; margin: 40px auto 0 auto;">
+    <h2 class="form-title">🔄 Restock Product</h2>
+    <form method="POST" class="restock-form" style="box-shadow:none; background:transparent; padding:0;">
+      <label for="product_id">Product:</label>
+      <select name="product_id" id="product_id" required>
+        <option value="" disabled selected>Select a product</option>
+        {% for p in products %}
+          <option value="{{ p[0] }}">{{ p[1] }}</option>
+        {% endfor %}
+      </select>
+      <br><br>
+      <label for="quantity">Quantity to Add:</label>
+      <input type="number" name="quantity" id="quantity" min="1" required>
+      <br><br>
+      <label for="price">Updated Price (optional):</label>
+      <input type="text" name="price" id="price" placeholder="Leave blank to keep current">
+      <br><br>
+      <label for="expiry">Updated Expiry Date (optional, YYYY-MM-DD):</label>
+      <input type="text" name="expiry" id="expiry" placeholder="Leave blank to keep current">
+      <br><br>
+      <button type="submit" class="btn">Restock</button>
+      <a href="/inventory" class="btn-cancel">Cancel</a>
+    </form>
+  </div>
+{% endblock %}

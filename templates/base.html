@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% block title %}SuperMart{% endblock %}</title>
+
+    <!-- External Stylesheets -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+    <div class="navbar no-print" style="margin-bottom: 30px;">
+        <div><a href="/dashboard">🏠 Dashboard</a></div>
+        <div>
+            {% if session.username %}
+                <span style="font-weight:500; color:#217dbb;">👤 {{ session.username }}</span> |
+                {% if session.role == 'admin' %}
+                    <a href="/manage_users">Manage User</a> |
+                    <a href="/admin_inventory_overview">Inventory Management</a> |
+                    <a href="/audit_log">Audit Log</a> |
+                    <a href="/create_user">➕ Create Staff</a> |
+                {% endif %}
+                <a href="/help">Help</a> |
+                <a href="/logout">Logout</a>
+            {% else %}
+                <a href="/">Login</a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="flash">{{ messages[0] }}</div>
+      {% endif %}
+    {% endwith %}
+
+    <main style="min-height: 70vh;">
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer style="text-align:center; color:#888; font-size:0.98rem; margin-top:40px; margin-bottom:10px;">
+      Olumayowa Oginni &copy; {{ now.year if now is defined else 2023 }}. All rights reserved.
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
