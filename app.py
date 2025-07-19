@@ -15,10 +15,11 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 # app.config['SESSION_COOKIE_SECURE'] = True
 
 def run_query(query, params=(), fetch=True):
-    import sqlite3
-    from config import DB_PATH
+    print(">>> Raw DB_PATH:", DB_PATH)
+    print(">>> Absolute DB_PATH:", os.path.abspath(DB_PATH))
     print("SQL QUERY:", query)
     print("PARAMS:", params)
+
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute(query, params)
@@ -26,6 +27,7 @@ def run_query(query, params=(), fetch=True):
     conn.commit()
     conn.close()
     return result
+
 
 @app.route("/restock_log")
 def restock_log():
