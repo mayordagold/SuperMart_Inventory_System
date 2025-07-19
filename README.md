@@ -64,10 +64,21 @@ All endpoints return JSON. Use session authentication (login via web UI first).
 - In-app help is available via the Help link in the navigation bar.
 - For further assistance, contact the project maintainer.
 
+## Environment Variables
+The following environment variables are required for production deployments:
+- `SECRET_KEY`: Secret key for Flask session security. **Must be set to a strong, random value in production.**
+- `FLASK_ENV`: Set to `production` for production deployments to enable secure cookies.
+- `DB_PATH`: (Optional) Path to the SQLite database file. Defaults to `SuperMart.db`.
+
+## Database Usage
+- The default database is `SuperMart.db`. If you use another database file, update `DB_PATH` in `config.py` or set the `DB_PATH` environment variable.
+- Remove or archive `inventory.db` if not in use, or document its purpose in the README.
+
 ## Security Notes
 - Use strong passwords for all accounts.
 - For production, set `SESSION_COOKIE_SECURE = True` in `app.py` and use HTTPS.
 - Regularly back up your database.
+- Never commit real secrets or production database files to version control.
 
 ---
 

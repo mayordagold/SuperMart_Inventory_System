@@ -5,37 +5,66 @@
   <div style="margin-bottom:2em; border:1px solid #ccc; padding:1em; border-radius:8px;">
     <h3>{{ staff.username|capitalize }}</h3>
     <strong>Allotted Inventory:</strong>
-    {% if staff.inventory %}
-      <table border="1" cellpadding="5" style="margin-bottom:1em;">
-        <tr>
-          <th>Product</th>
-          <th>Allotted</th>
-          <th>Remaining</th>
-        </tr>
+    <table border="1" cellpadding="5" style="margin-bottom:1em;">
+      <tr>
+        <th>Product</th>
+        <th>Unit Price</th>
+        <th>Allotted</th>
+        <th>Allotted Value</th>
+        <th>Remaining</th>
+        <th>Remaining Value</th>
+      </tr>
+      {% if staff.inventory %}
+        {% set grand_total_allotted = 0 %}
+        {% set grand_total_remaining = 0 %}
         {% for inv in staff.inventory %}
+        {% set allotted_value = inv[1] * inv[2] %}
+        {% set remaining_value = inv[1] * inv[3] %}
+        {% set grand_total_allotted = grand_total_allotted + allotted_value %}
+        {% set grand_total_remaining = grand_total_remaining + remaining_value %}
         <tr>
           <td>{{ inv[0] }}</td>
-          <td>{{ inv[1] }}</td>
+          <td>₦{{ '%.2f'|format(inv[1]) }}</td>
           <td>{{ inv[2] }}</td>
+          <td>₦{{ '%.2f'|format(allotted_value) }}</td>
+          <td>{{ inv[3] }}</td>
+          <td>₦{{ '%.2f'|format(remaining_value) }}</td>
         </tr>
         {% endfor %}
-      </table>
-    {% else %}
-      <p>No products allotted.</p>
-    {% endif %}
+        <tr style="font-weight:bold; background:#f4f8fb;">
+          <td colspan="3">Grand Total Allotted</td>
+          <td>₦{{ '%.2f'|format(grand_total_allotted) }}</td>
+          <td>Grand Total Remaining</td>
+          <td>₦{{ '%.2f'|format(grand_total_remaining) }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" style="text-align:center; color:#888;">No products allotted.</td></tr>
+      {% endif %}
+    </table>
     <strong>Sales:</strong>
     {% if staff.sales %}
       <table border="1" cellpadding="5">
         <tr>
           <th>Product</th>
+          <th>Unit Price</th>
           <th>Quantity Sold</th>
+          <th>Total Sales Value</th>
         </tr>
+        {% set grand_total_sales = 0 %}
         {% for sale in staff.sales %}
+        {% set total_sales_value = sale[1] * sale[2] %}
+        {% set grand_total_sales = grand_total_sales + total_sales_value %}
         <tr>
           <td>{{ sale[0] }}</td>
+          <td>₦{{ '%.2f'|format(sale[2]) }}</td>
           <td>{{ sale[1] }}</td>
+          <td>₦{{ '%.2f'|format(total_sales_value) }}</td>
         </tr>
         {% endfor %}
+        <tr style="font-weight:bold; background:#f4f8fb;">
+          <td colspan="3">Grand Total Sales</td>
+          <td>₦{{ '%.2f'|format(grand_total_sales) }}</td>
+        </tr>
       </table>
     {% else %}
       <p>No sales yet.</p>

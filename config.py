@@ -12,4 +12,4 @@ SUPPLIERS = [
     "GSK", "Pfizer", "Neimeth", "Meyer", "Jawa", "Others"
 ]
 
-SECRET_KEY = "restock123"
+SECRET_KEY = os.environ.get("SECRET_KEY", "restock123")

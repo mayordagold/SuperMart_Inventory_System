@@ -1,6 +1,72 @@
 {% extends "base.html" %}
 
-{% block title %}🏠 Dashboard{% endblock %}
+{% block title %}🏠 Dashboard{% if role == 'staff' %}
+    <h3 style="margin-top: 40px;">🗃️ Staff Inventory Assignments</h3>
+    <table class="styled-table" style="width: 90%; margin-top: 10px;">
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Unit Price</th>
+          <th>Allotted Qty</th>
+          <th>Allotted Value</th>
+          <th>Remaining Qty</th>
+          <th>Remaining Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in staff_inventory_table %}
+        <tr>
+          <td>{{ row.name }}</td>
+          <td>₦{{ '%.2f'|format(row.price) }}</td>
+          <td>{{ row.allotted }}</td>
+          <td>₦{{ '%.2f'|format(row.allotted_value) }}</td>
+          <td>{{ row.remaining }}</td>
+          <td>₦{{ '%.2f'|format(row.remaining_value) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr style="font-weight:bold; background:#f4f8fb;">
+          <td colspan="3">Grand Total Allotted</td>
+          <td>₦{{ '%.2f'|format(grand_total_allotted) }}</td>
+          <td>Grand Total Remaining</td>
+          <td>₦{{ '%.2f'|format(grand_total_remaining) }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  {% elif role == 'admin' %}
+    <h3 style="margin-top: 40px;">🗃️ Staff Inventory Assignments</h3>
+    {% for staff in staff_inventory_assignments.values() %}
+      <div style="margin-bottom: 30px;">
+        <h4 style="color:#217dbb;">👤 {{ staff.username }}</h4>
+        <table class="styled-table" style="width: 90%;">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Unit Price</th>
+              <th>Allotted Qty</th>
+              <th>Allotted Value</th>
+              <th>Remaining Qty</th>
+              <th>Remaining Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for prod in staff.products %}
+            <tr>
+              <td>{{ prod.product_name }}</td>
+              <td>₦{{ '%.2f'|format(prod.price) }}</td>
+              <td>{{ prod.allotted }}</td>
+              <td>₦{{ '%.2f'|format(prod.allotted_value) }}</td>
+              <td>{{ prod.remaining }}</td>
+              <td>₦{{ '%.2f'|format(prod.remaining_value) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endblock %}
 
 {% block content %}
   <h2 class="page-title">🏠 Welcome, {{ user|capitalize }} ({{ role }})</h2>
@@ -15,10 +81,25 @@
       <h3>📅 Today's Sales</h3>
       <p>₦{{ "%.2f"|format(today_sales) }}</p>
     </div>
-    <div class="card">
-      <h3>⚠️ Low Stock Items</h3>
-      <p>{{ low_stock_count }}</p>
-    </div>
+    {% if role == 'staff' %}
+      <div class="card">
+        <h3>📦 Total Stocked Items</h3>
+        <p>{{ total_stocked_items }}</p>
+      </div>
+      <div class="card">
+        <h3>💸 Total Stocked Amount</h3>
+        <p>₦{{ "%.2f"|format(total_stocked_amount) }}</p>
+      </div>
+    {% elif role == 'admin' %}
+      <div class="card">
+        <h3>👥 Total Stocked Items (All Staff)</h3>
+        <p>{{ total_stocked_items_all_staff }}</p>
+      </div>
+      <div class="card">
+        <h3>💸 Total Stocked Amount (All Staff)</h3>
+        <p>₦{{ "%.2f"|format(total_stocked_amount_all_staff) }}</p>
+      </div>
+    {% endif %}
   </div>
 
   <!-- 📊 Analytics Charts -->
@@ -118,12 +199,14 @@
   <!-- 🔗 Quick Links -->
   <div class="tiles" style="margin-top: 40px;">
     <a href="/inventory" class="tile">📦 Inventory</a>
-    <a href="/sell" class="tile">🛍️ Sell Products (POS)</a>
+    {% if role == 'staff' %}
+      <a href="/sell" class="tile">🛍️ Sell Products (POS)</a>
+    {% endif %}
     <a href="/transactions" class="tile">📜 Transaction History</a>
-
     {% if role == 'admin' %}
       <a href="/restock" class="tile">📥 Restock Product</a>
       <a href="/add_product" class="tile">🆕 Add Product</a>
+      <a href="/staff_inventory_report" class="tile">📊 Staff Inventory Report</a>
     {% endif %}
   </div>
 {% endblock %}

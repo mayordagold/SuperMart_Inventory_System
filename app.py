@@ -12,7 +12,9 @@ app.secret_key = SECRET_KEY
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 # Uncomment for HTTPS in production:
-# app.config['SESSION_COOKIE_SECURE'] = True
+import os
+if os.environ.get("FLASK_ENV") == "production":
+    app.config['SESSION_COOKIE_SECURE'] = True
 
 def run_query(query, params=(), fetch=True):
     import sqlite3
@@ -288,8 +290,30 @@ def dashboard():
         # Staff: Only their own sales and inventory
         total_sales = run_query("SELECT SUM(price * quantity) FROM transactions WHERE user_id = ?", (session["user_id"],))[0][0] or 0
         today_sales = run_query("SELECT SUM(price * quantity) FROM transactions WHERE user_id = ? AND DATE(timestamp) = ?", (session["user_id"], today))[0][0] or 0
-        # Staff inventory: count of products assigned to them with remaining > 0
-        low_stock_count = run_query("SELECT COUNT(*) FROM staff_inventory WHERE staff_id = ? AND quantity_remaining < 5", (session["user_id"],))[0][0]
+        # Staff inventory: get all products assigned to them
+        staff_inventory = run_query("""
+            SELECT p.name, p.price, si.quantity_allotted, si.quantity_remaining
+            FROM staff_inventory si
+            JOIN products p ON si.product_id = p.product_id
+            WHERE si.staff_id = ?
+        """, (session["user_id"],))
+        total_stocked_items = sum([row[2] for row in staff_inventory])
+        total_stocked_amount = sum([row[1] * row[2] for row in staff_inventory])
+        # For table: price for allotted and remaining, and grand total
+        staff_inventory_table = [
+            {
+                "name": row[0],
+                "price": row[1],
+                "allotted": row[2],
+                "remaining": row[3],
+                "allotted_value": row[1] * row[2],
+                "remaining_value": row[1] * row[3],
+            }
+            for row in staff_inventory
+        ]
+        grand_total_allotted = sum([row["allotted_value"] for row in staff_inventory_table])
+        grand_total_remaining = sum([row["remaining_value"] for row in staff_inventory_table])
+        # Top products
         top_products = run_query("""
             SELECT p.name, SUM(t.quantity) as qty_sold
             FROM transactions t
@@ -341,11 +365,55 @@ def dashboard():
             {"label": "Near Expiry", "count": near_expiry},
             {"label": "Good", "count": good},
         ]
+        return render_template(
+            "dashboard.html",
+            user=user,
+            role=role,
+            total_sales=total_sales,
+            today_sales=today_sales,
+            total_stocked_items=total_stocked_items,
+            total_stocked_amount=total_stocked_amount,
+            staff_inventory_table=staff_inventory_table,
+            grand_total_allotted=grand_total_allotted,
+            grand_total_remaining=grand_total_remaining,
+            top_products=top_products,
+            now=datetime.now(),
+            sales_trend_data=sales_trend_data,
+            stock_level_data=stock_level_data,
+            expiry_data=expiry_data
+        )
     else:
         # Admin: All stats
         total_sales = run_query("SELECT SUM(price * quantity) FROM transactions")[0][0] or 0
         today_sales = run_query("SELECT SUM(price * quantity) FROM transactions WHERE DATE(timestamp) = ?", (today,))[0][0] or 0
-        low_stock_count = run_query("SELECT COUNT(*) FROM products WHERE quantity_in_stock < 5")[0][0]
+        # Remove low_stock_count for admin
+        # Calculate total stocked items and amount for all staff
+        staff_assignments = run_query("""
+            SELECT si.staff_id, u.username, p.name, p.price, si.quantity_allotted, si.quantity_remaining
+            FROM staff_inventory si
+            JOIN users u ON si.staff_id = u.user_id
+            JOIN products p ON si.product_id = p.product_id
+        """)
+        total_stocked_items_all_staff = sum([row[4] for row in staff_assignments])
+        total_stocked_amount_all_staff = sum([row[3] * row[4] for row in staff_assignments])
+        # For staff inventory assignments table
+        staff_inventory_assignments = {}
+        for row in staff_assignments:
+            staff_id, username, product_name, price, allotted, remaining = row
+            if staff_id not in staff_inventory_assignments:
+                staff_inventory_assignments[staff_id] = {
+                    "username": username,
+                    "products": []
+                }
+            staff_inventory_assignments[staff_id]["products"].append({
+                "product_name": product_name,
+                "price": price,
+                "allotted": allotted,
+                "remaining": remaining,
+                "allotted_value": price * allotted,
+                "remaining_value": price * remaining
+            })
+        # Top products
         top_products = run_query("""
             SELECT name, SUM(quantity) as qty_sold
             FROM transactions
@@ -354,16 +422,13 @@ def dashboard():
             LIMIT 5
         """)
         # --- Analytics Data for Charts ---
-        # Sales Trend (last 14 days)
         sales_trend_data = []
         for i in range(13, -1, -1):
             day = (date.today() - timedelta(days=i)).isoformat()
             total = run_query("SELECT SUM(price * quantity) FROM transactions WHERE DATE(timestamp) = ?", (day,))[0][0] or 0
             sales_trend_data.append({"date": day, "total": total})
-        # Stock Level Distribution (top 10 by stock)
         stock_rows = run_query("SELECT name, quantity_in_stock FROM products ORDER BY quantity_in_stock DESC LIMIT 10")
         stock_level_data = [{"name": r[0], "stock": r[1]} for r in stock_rows]
-        # Expiry Statistics
         products = run_query("SELECT expiry_date FROM products")
         expired = 0
         near_expiry = 0
@@ -385,20 +450,21 @@ def dashboard():
             {"label": "Near Expiry", "count": near_expiry},
             {"label": "Good", "count": good},
         ]
-
-    return render_template(
-        "dashboard.html",
-        user=user,
-        role=role,
-        total_sales=total_sales,
-        today_sales=today_sales,
-        low_stock_count=low_stock_count,
-        top_products=top_products,
-        now=datetime.now(),
-        sales_trend_data=sales_trend_data,
-        stock_level_data=stock_level_data,
-        expiry_data=expiry_data
-    )
+        return render_template(
+            "dashboard.html",
+            user=user,
+            role=role,
+            total_sales=total_sales,
+            today_sales=today_sales,
+            total_stocked_items_all_staff=total_stocked_items_all_staff,
+            total_stocked_amount_all_staff=total_stocked_amount_all_staff,
+            staff_inventory_assignments=staff_inventory_assignments,
+            top_products=top_products,
+            now=datetime.now(),
+            sales_trend_data=sales_trend_data,
+            stock_level_data=stock_level_data,
+            expiry_data=expiry_data
+        )
 
 
 @app.route("/manage_users", methods=["GET", "POST"])
@@ -909,16 +975,16 @@ def staff_inventory_report():
     staff_data = []
     for staff_id, username in staff_users:
         inventory = run_query("""
-            SELECT p.name, si.quantity_allotted, si.quantity_remaining
+            SELECT p.name, p.price, si.quantity_allotted, si.quantity_remaining
             FROM staff_inventory si
             JOIN products p ON si.product_id = p.product_id
             WHERE si.staff_id = ?
         """, (staff_id,))
         sales = run_query("""
-            SELECT t.name, SUM(t.quantity) as qty_sold
+            SELECT t.name, SUM(t.quantity) as qty_sold, t.price
             FROM transactions t
             WHERE t.user_id = ?
-            GROUP BY t.product_id
+            GROUP BY t.product_id, t.price, t.name
         """, (staff_id,))
         staff_data.append({
             "username": username,
@@ -940,7 +1006,7 @@ def admin_inventory_overview():
     staff_users = run_query("SELECT user_id, username FROM users WHERE role = 'staff' AND status = 'active' ORDER BY username")
     # Fetch all staff inventory assignments
     assignments = run_query("""
-        SELECT si.staff_id, u.username, si.product_id, p.name, si.quantity_allotted, si.quantity_remaining
+        SELECT si.staff_id, u.username, si.product_id, p.name, p.price, si.quantity_allotted, si.quantity_remaining
         FROM staff_inventory si
         JOIN users u ON si.staff_id = u.user_id
         JOIN products p ON si.product_id = p.product_id
@@ -949,12 +1015,13 @@ def admin_inventory_overview():
 
     # Organize assignments for easy lookup
     assignment_map = {}
-    for staff_id, username, product_id, product_name, qty_allotted, qty_remaining in assignments:
+    for staff_id, username, product_id, product_name, price, qty_allotted, qty_remaining in assignments:
         if staff_id not in assignment_map:
             assignment_map[staff_id] = {"username": username, "products": []}
         assignment_map[staff_id]["products"].append({
             "product_id": product_id,
             "product_name": product_name,
+            "price": price,
             "quantity_allotted": qty_allotted,
             "quantity_remaining": qty_remaining
         })
