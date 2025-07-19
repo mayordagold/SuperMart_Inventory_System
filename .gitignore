@@ -1,4 +1,6 @@
 *.db
+SuperMart.db
+inventory.db
 __pycache__/
 venv/
 *.pyc
