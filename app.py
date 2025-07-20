@@ -6,7 +6,8 @@ from uuid import uuid4
 from config import CATEGORIES, SUPPLIERS, DB_PATH, SECRET_KEY
 
 
-app = Flask(__name__)
+import os
+app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), 'SuperMart_Inventory_System', 'templates'))
 app.secret_key = SECRET_KEY
 # Security: Secure session cookies (for production)
 app.config['SESSION_COOKIE_HTTPONLY'] = True
@@ -110,8 +111,12 @@ def transactions():
         "end_date": request.args.get("end_date", "").strip()
     }
 
+    # Get all staff usernames for filter dropdown
+    staff_users = run_query("SELECT username FROM users WHERE role='staff' ORDER BY username")
+    staff_usernames = [u[0] for u in staff_users]
+
     query = """
-        SELECT il.timestamp, p.name, il.quantity, il.action, u.username
+        SELECT il.timestamp, p.name, il.quantity, il.action, u.username, p.price
         FROM inventory_log il
         JOIN products p ON il.product_id = p.product_id
         JOIN users u ON il.user_id = u.user_id
@@ -124,6 +129,9 @@ def transactions():
         query += " AND u.user_id = ?"
         params.append(session["user_id"])
     else:
+        # Admin: by default, only show sales unless another action is selected
+        if not filters["action"]:
+            query += " AND il.action = 'sale'"
         # Admin can filter by staff username
         if filters["user"]:
             query += " AND LOWER(u.username) = ?"
@@ -142,7 +150,7 @@ def transactions():
     query += " ORDER BY il.timestamp DESC"
     logs = run_query(query, params)
 
-    return render_template("transactions.html", logs=logs, filters=filters, now=datetime.now())
+    return render_template("transactions.html", logs=logs, filters=filters, staff_usernames=staff_usernames, now=datetime.now())
 
 
 @app.route("/add_product", methods=["GET", "POST"])
@@ -770,48 +778,6 @@ def export_inventory():
         headers={"Content-Disposition": "attachment;filename=inventory_export.csv"})
 
 
-@app.route("/export_transactions")
-def export_transactions():
-    from flask import Response, request
-    import csv, io
-
-    action = request.args.get("action")
-    user = request.args.get("user")
-    start = request.args.get("start_date")
-    end = request.args.get("end_date")
-
-    query = """
-        SELECT t.product_id, t.name, t.price, t.quantity, t.action, t.timestamp, u.username
-        FROM inventory_log t
-        JOIN users u ON t.user_id = u.user_id
-        WHERE 1=1
-    """
-    params = []
-
-    if action:
-        query += " AND t.action = ?"
-        params.append(action)
-    if user:
-        query += " AND u.username = ?"
-        params.append(user)
-    if start:
-        query += " AND DATE(t.timestamp) >= ?"
-        params.append(start)
-    if end:
-        query += " AND DATE(t.timestamp) <= ?"
-        params.append(end)
-
-    results = run_query(query, params)
-
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["Product ID", "Name", "Price", "Quantity", "Action", "Timestamp", "User"])
-    for row in results:
-        writer.writerow(row)
-
-    output.seek(0)
-    return Response(output, mimetype="text/csv",
-        headers={"Content-Disposition": "attachment;filename=transactions_export.csv"})
 
 
 @app.route("/logout")
@@ -1013,9 +979,13 @@ def admin_inventory_overview():
         ORDER BY u.username, p.name
     """)
 
+    # Staff filter for assignment map (optional GET param)
+    staff_id_filter = request.args.get("staff_id")
     # Organize assignments for easy lookup
     assignment_map = {}
     for staff_id, username, product_id, product_name, price, qty_allotted, qty_remaining in assignments:
+        if staff_id_filter and str(staff_id) != str(staff_id_filter):
+            continue
         if staff_id not in assignment_map:
             assignment_map[staff_id] = {"username": username, "products": []}
         assignment_map[staff_id]["products"].append({
@@ -1083,8 +1053,57 @@ def admin_inventory_overview():
         products=products,
         staff_users=staff_users,
         assignment_map=assignment_map,
+        staff_id_filter=staff_id_filter,
         now=datetime.now()
     )
+
+# Export Staff Sales Report as CSV
+@app.route("/export_staff_sales_report")
+def export_staff_sales_report():
+    import csv, io
+    from flask import Response
+    staff_users = run_query("SELECT user_id, username FROM users WHERE role = 'staff' ORDER BY username")
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Staff Username", "Product", "Quantity Sold", "Price per Unit", "Total Sales"])
+    for staff_id, username in staff_users:
+        sales = run_query("""
+            SELECT t.name, SUM(t.quantity) as qty_sold, p.price
+            FROM transactions t
+            JOIN products p ON t.product_id = p.product_id
+            WHERE t.user_id = ?
+            GROUP BY t.product_id, p.price, t.name
+        """, (staff_id,))
+        for sale in sales:
+            product, qty_sold, price = sale[0], int(sale[1]), float(sale[2])
+            total_sales = qty_sold * price
+            writer.writerow([username, product, qty_sold, f"{price:.2f}", f"{total_sales:.2f}"])
+    output.seek(0)
+    return Response(output, mimetype="text/csv", headers={"Content-Disposition": "attachment;filename=staff_sales_report.csv"})
+
+# Export Staff Allotted Inventory as CSV
+@app.route("/export_staff_inventory_report")
+def export_staff_inventory_report():
+    import csv, io
+    from flask import Response
+    staff_users = run_query("SELECT user_id, username FROM users WHERE role = 'staff' ORDER BY username")
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Staff Username", "Product", "Unit Price", "Allotted Quantity", "Remaining Quantity", "Allotted Price", "Remaining Price"])
+    for staff_id, username in staff_users:
+        inventory = run_query("""
+            SELECT p.name, p.price, si.quantity_allotted, si.quantity_remaining
+            FROM staff_inventory si
+            JOIN products p ON si.product_id = p.product_id
+            WHERE si.staff_id = ?
+        """, (staff_id,))
+        for inv in inventory:
+            product, price, qty_allotted, qty_remaining = inv[0], float(inv[1]), int(inv[2]), int(inv[3])
+            allotted_price = price * qty_allotted
+            remaining_price = price * qty_remaining
+            writer.writerow([username, product, f"{price:.2f}", qty_allotted, qty_remaining, f"{allotted_price:.2f}", f"{remaining_price:.2f}"])
+    output.seek(0)
+    return Response(output, mimetype="text/csv", headers={"Content-Disposition": "attachment;filename=staff_inventory_report.csv"})
 
 # Help Page Route
 @app.route("/help")
